@@ -8,15 +8,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class EncryptionService {
 
-    /** How many salt rounds should the encryption run. */
     @Value("${encryption.salt.rounds}")
     private int saltRounds;
-    /** The salt built after construction. */
+
     private String salt;
 
-    /**
-     * Post construction method.
-     */
     @PostConstruct
     public void postConstruct() {
         salt = BCrypt.gensalt(saltRounds);
