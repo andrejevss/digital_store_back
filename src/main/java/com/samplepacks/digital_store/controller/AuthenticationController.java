@@ -4,6 +4,7 @@ import com.samplepacks.digital_store.dto.LoginRequest;
 import com.samplepacks.digital_store.dto.LoginResponse;
 import com.samplepacks.digital_store.dto.SignupRequest;
 import com.samplepacks.digital_store.entity.LocalUser;
+import com.samplepacks.digital_store.enums.UserRole;
 import com.samplepacks.digital_store.exception.EmailFailureException;
 import com.samplepacks.digital_store.exception.UserAlreadyExistsException;
 import com.samplepacks.digital_store.exception.UserNotVerifiedException;
@@ -12,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +26,7 @@ public class AuthenticationController {
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signupRequest) {
+        System.out.println("Registration attempt for: " + signupRequest.getEmail());
         try {
             userService.registerUser(signupRequest);
             return ResponseEntity.ok().build();
@@ -32,6 +35,13 @@ public class AuthenticationController {
         } catch (EmailFailureException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+//        System.out.println("Registration completed (email disabled)");
+//        return ResponseEntity.ok().build();
+    }
+    @PostMapping("/register/admin")
+    @PreAuthorize("hasRole('ADMIN')") // Only admins can create other admins
+    public ResponseEntity<LoginResponse> registerAdmin(@RequestBody SignupRequest signupRequest) throws UserAlreadyExistsException {
+        return ResponseEntity.ok(userService.registerUser(signupRequest, UserRole.ADMIN));
     }
 
     @PostMapping("/login")
@@ -60,7 +70,7 @@ public class AuthenticationController {
         }
     }
 
-    @PostMapping("/verify")
+    @GetMapping("/verify")
     public ResponseEntity verifyEmail(@RequestParam String token) {
         if (userService.verifyUser(token)) {
             return ResponseEntity.ok().build();

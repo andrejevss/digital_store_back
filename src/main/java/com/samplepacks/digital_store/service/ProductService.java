@@ -13,7 +13,7 @@ import java.util.Optional;
 public class ProductService {
     private final ProductDAO productDAO;
 
-    public List<Product> getAllProducts(){
+    public List <Product> getAllProducts(){
         return productDAO.findAll();
     }
 

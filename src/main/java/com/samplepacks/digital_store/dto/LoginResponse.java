@@ -7,6 +7,9 @@ public class LoginResponse {
     /** The reason for failure on login. */
     private String failureReason;
 
+    public LoginResponse() {
+    }
+
     public String getJwt() {
         return jwt;
     }

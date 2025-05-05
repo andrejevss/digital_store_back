@@ -1,15 +1,18 @@
 package com.samplepacks.digital_store.service;
 
 import com.samplepacks.digital_store.dto.LoginRequest;
+import com.samplepacks.digital_store.dto.LoginResponse;
 import com.samplepacks.digital_store.dto.SignupRequest;
 import com.samplepacks.digital_store.entity.LocalUser;
 import com.samplepacks.digital_store.entity.VerificationToken;
+import com.samplepacks.digital_store.enums.UserRole;
 import com.samplepacks.digital_store.exception.EmailFailureException;
 import com.samplepacks.digital_store.exception.UserAlreadyExistsException;
 import com.samplepacks.digital_store.exception.UserNotVerifiedException;
 import com.samplepacks.digital_store.repository.LocalUserDAO;
 import com.samplepacks.digital_store.repository.VerificationTokenDAO;
 import jakarta.transaction.Transactional;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
@@ -19,26 +22,12 @@ import java.util.Optional;
 @Service
 public class UserService {
 
-    /** The LocalUserDAO. */
-    private LocalUserDAO localUserDAO;
-    /** The VerificationTokenDAO. */
-    private VerificationTokenDAO verificationTokenDAO;
-    /** The encryption service. */
-    private EncryptionService encryptionService;
-    /** The JWT service. */
-    private JWTService jwtService;
-    /** The email service. */
-    private EmailService emailService;
+    private final LocalUserDAO localUserDAO;
+    private final VerificationTokenDAO verificationTokenDAO;
+    private final EncryptionService encryptionService;
+    private final JWTService jwtService;
+    private final EmailService emailService;
 
-    /**
-     * Constructor injected by spring.
-     *
-     * @param localUserDAO
-     * @param verificationTokenDAO
-     * @param encryptionService
-     * @param jwtService
-     * @param emailService
-     */
     public UserService(LocalUserDAO localUserDAO, VerificationTokenDAO verificationTokenDAO, EncryptionService encryptionService,
                        JWTService jwtService, EmailService emailService) {
         this.localUserDAO = localUserDAO;
@@ -48,6 +37,12 @@ public class UserService {
         this.emailService = emailService;
     }
 
+    // 2. Proper instance method
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<LocalUser> getAllUsers() {
+        return localUserDAO.findAll();  // Correct instance method call
+    }
+
     /**
      * Attempts to register a user given the information provided.
      * @param signupRequest The registration information.
@@ -55,7 +50,7 @@ public class UserService {
      * @throws UserAlreadyExistsException Thrown if there is already a user with the given information.
      */
     public LocalUser registerUser(SignupRequest signupRequest) throws UserAlreadyExistsException, EmailFailureException {
-        if (localUserDAO.findByEmailIgnoreCase(signupRequest.getEmail()).isPresent()
+        if (LocalUserDAO.findByEmailIgnoreCase(signupRequest.getEmail()).isPresent()
                 || localUserDAO.findByUsernameIgnoreCase(signupRequest.getUsername()).isPresent()) {
             throw new UserAlreadyExistsException();
         }
@@ -98,8 +93,8 @@ public class UserService {
                     return jwtService.generateJWT(user);
                 } else {
                     List<VerificationToken> verificationTokens = user.getVerificationTokens();
-                    boolean resend = verificationTokens.size() == 0 ||
-                            verificationTokens.get(0).getCreatedTimestamp().before(new Timestamp(System.currentTimeMillis() - (60 * 60 * 1000)));
+                    boolean resend = verificationTokens.isEmpty() ||
+                            verificationTokens.getFirst().getCreatedTimestamp().before(new Timestamp(System.currentTimeMillis() - (60 * 60 * 1000)));
                     if (resend) {
                         VerificationToken verificationToken = createVerificationToken(user);
                         verificationTokenDAO.save(verificationToken);
@@ -110,6 +105,18 @@ public class UserService {
             }
         }
         return null;
+    }
+    public LoginResponse registerUser(SignupRequest signupRequest, UserRole role) throws UserAlreadyExistsException {
+        if (LocalUserDAO.findByEmailIgnoreCase(signupRequest.getEmail()).isPresent()) {
+            throw new UserAlreadyExistsException();
+        }
+
+        LocalUser user = new LocalUser();
+        user.setEmail(signupRequest.getEmail());
+        user.setRole(role); // Set the role from parameter
+        // ... rest of registration logic
+
+        return new LoginResponse();
     }
 
     /**

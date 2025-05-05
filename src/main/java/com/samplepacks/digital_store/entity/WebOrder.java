@@ -18,6 +18,6 @@ public class WebOrder {
     @JoinColumn(name = "user_id", nullable = false)
     private LocalUser user;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.REMOVE, orphanRemoval = true)
-    private List<SamplePacks> quantities = new ArrayList<>();
+    @OneToMany(cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Product> quantities = new ArrayList<>();
 }
